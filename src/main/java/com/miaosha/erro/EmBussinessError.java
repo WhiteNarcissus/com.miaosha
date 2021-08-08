@@ -6,8 +6,9 @@ public enum EmBussinessError implements CommonError {
     PARAMETER_VALIDATION_ERROR(10001, "参数不合法"),
     UNKNOWN_ERROR(10002,"未知错误"),
 
-    //1000开头 用户模块
-    USER_NOT_EXIST(20001, "用户不存在");
+    //2000开头 用户模块
+    USER_NOT_EXIST(20001, "用户不存在"),
+    USER_LOGIN_FAILED(20002, "用户手机号或密码错误");
     private int errCode;
     private String errMsg;
 

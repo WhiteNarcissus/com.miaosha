@@ -1,28 +1,38 @@
 package com.miaosha.controller;
 
+import com.miaosha.common.redis.RedisUtils;
 import com.miaosha.controller.viewObject.UserVo;
 import com.miaosha.dataobject.response.CommonReturnType;
 import com.miaosha.erro.BusinessException;
 import com.miaosha.erro.EmBussinessError;
 import com.miaosha.service.UserService;
 import com.miaosha.service.model.UserModel;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import sun.misc.BASE64Encoder;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
 @Controller
 @RequestMapping("/user")
+@CrossOrigin(allowCredentials = "true",allowedHeaders = "*")
 public class UserController extends BaseController {
 
 
     @Autowired
     UserService userService;
     @Autowired
-    HttpServletRequest request ;
+    private HttpServletRequest request ;
+    @Autowired
+    private RedisUtils redisUtils ;
+
 
 
     @RequestMapping("/get")
@@ -52,7 +62,6 @@ public class UserController extends BaseController {
     //短信验证码
 
     @RequestMapping(value = "/getotp",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
-    @CrossOrigin
     @ResponseBody
     public CommonReturnType getUserOtp(@RequestParam(name = "telphone") String telphone) {
 
@@ -61,11 +70,60 @@ public class UserController extends BaseController {
         int radonNum = random.nextInt(999999);
         radonNum += 100000;
         //将用户手机号 和 验证码关联 (正常来说这里肯定是要用redis 来的 redis 可以设置过期时间 多次点击同)
-
-        request.getSession().setAttribute(telphone,radonNum);
-        System.out.println("telphone:" + telphone + "radonNum" + radonNum);
-        // 通过短信模板 发送短信
+        redisUtils.set(telphone,radonNum,1000*60);
+        System.out.println("telphone:"+telphone+"----"+"code:"+redisUtils.get(telphone));
 
         return CommonReturnType.create(null);
+    }
+
+    @RequestMapping(value = "/register",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
+    @ResponseBody
+    public CommonReturnType register(@RequestParam(name = "telphone") String telphone,
+                                     @RequestParam(name = "otpCode") String otpCode,
+                                     @RequestParam(name = "name") String name,
+                                     @RequestParam(name = "gender") Integer gender,
+                                     @RequestParam(name = "age") Integer age,
+                                     @RequestParam(name = "encreptPassword") String encreptPassword
+                                 ) throws BusinessException ,NoSuchAlgorithmException, UnsupportedEncodingException {
+
+         String localOtpCode =redisUtils.get(telphone).toString();
+        //先验证码
+        if(!otpCode.equals(localOtpCode)){
+            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR,"短信验证不通过");
+        }
+        //用户的注册流程
+        UserModel userModel = new UserModel();
+        userModel.setName(name);
+        userModel.setTelphone(telphone);
+        userModel.setRegisterMode("byPhone");
+        userModel.setAge(age);
+        userModel.setGender(gender.byteValue());
+        userModel.setEncreptPassword(encodeByMd5(encreptPassword));
+        userService.register(userModel);
+
+      return CommonReturnType.create(null) ;
+    }
+
+    //登入
+    @RequestMapping(value = "/login",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
+    @ResponseBody
+    public CommonReturnType login(@RequestParam(name = "telphone") String telphone,@RequestParam(name = "encreptPassword") String encreptPassword) throws BusinessException  ,NoSuchAlgorithmException, UnsupportedEncodingException{
+        if(StringUtils.isBlank(telphone) || StringUtils.isBlank(encreptPassword)){
+            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR);
+        }
+        UserModel  userModel = userService.login(telphone ,encreptPassword);
+        if(!encreptPassword.equals(encodeByMd5(userModel.getEncreptPassword()))){
+            throw new BusinessException(EmBussinessError.USER_LOGIN_FAILED);
+        }
+
+        return CommonReturnType.create(null);
+    }
+
+
+    private String encodeByMd5(String encreptPassword) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        BASE64Encoder base64Encoder = new BASE64Encoder();
+        String  encodePassword = base64Encoder.encode(md5.digest(encreptPassword.getBytes("utf-8")));
+        return encodePassword;
     }
 }

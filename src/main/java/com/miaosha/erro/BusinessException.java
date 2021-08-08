@@ -16,6 +16,15 @@ public class BusinessException  extends Exception implements CommonError{
    }
 
 
+    public BusinessException(CommonError commonError,String errMsg){
+        //继承了这个类Exception 有些方法要初始化
+        super();
+        this.commonError = commonError;
+        setErrMsg(errMsg);
+    }
+
+
+
     @Override
     public int getErrCode() {
         return this.commonError.getErrCode();
