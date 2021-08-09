@@ -2,9 +2,9 @@ package com.miaosha.controller;
 
 import com.miaosha.common.redis.RedisUtils;
 import com.miaosha.controller.viewObject.UserVo;
-import com.miaosha.dataobject.response.CommonReturnType;
+import com.miaosha.response.CommonReturnType;
 import com.miaosha.erro.BusinessException;
-import com.miaosha.erro.EmBussinessError;
+import com.miaosha.erro.EmBussinessErr;
 import com.miaosha.service.UserService;
 import com.miaosha.service.model.UserModel;
 import org.apache.commons.lang3.StringUtils;
@@ -22,17 +22,16 @@ import java.util.Random;
 
 @Controller
 @RequestMapping("/user")
-@CrossOrigin(allowCredentials = "true",allowedHeaders = "*")
+@CrossOrigin(allowCredentials = "true", allowedHeaders = "*")
 public class UserController extends BaseController {
 
 
     @Autowired
     UserService userService;
     @Autowired
-    private HttpServletRequest request ;
+    private HttpServletRequest request;
     @Autowired
-    private RedisUtils redisUtils ;
-
+    private RedisUtils redisUtils;
 
 
     @RequestMapping("/get")
@@ -42,7 +41,7 @@ public class UserController extends BaseController {
         Integer a = null;
         a.byteValue();
         if (userModel == null) {
-            throw new BusinessException(EmBussinessError.USER_NOT_EXIST);
+            throw new BusinessException(EmBussinessErr.USER_NOT_EXIST);
         }
 
         UserVo userVo = convertFromModel(userModel);
@@ -61,7 +60,7 @@ public class UserController extends BaseController {
 
     //短信验证码
 
-    @RequestMapping(value = "/getotp",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
+    @RequestMapping(value = "/getotp", method = {RequestMethod.POST}, consumes = {CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType getUserOtp(@RequestParam(name = "telphone") String telphone) {
 
@@ -70,26 +69,26 @@ public class UserController extends BaseController {
         int radonNum = random.nextInt(999999);
         radonNum += 100000;
         //将用户手机号 和 验证码关联 (正常来说这里肯定是要用redis 来的 redis 可以设置过期时间 多次点击同)
-        redisUtils.set(telphone,radonNum,1000*60);
-        System.out.println("telphone:"+telphone+"----"+"code:"+redisUtils.get(telphone));
+        redisUtils.set(telphone, radonNum, 1000 * 60);
+        System.out.println("telphone:" + telphone + "----" + "code:" + redisUtils.get(telphone));
 
         return CommonReturnType.create(null);
     }
 
-    @RequestMapping(value = "/register",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
+    @RequestMapping(value = "/register", method = {RequestMethod.POST}, consumes = {CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType register(@RequestParam(name = "telphone") String telphone,
                                      @RequestParam(name = "otpCode") String otpCode,
                                      @RequestParam(name = "name") String name,
                                      @RequestParam(name = "gender") Integer gender,
                                      @RequestParam(name = "age") Integer age,
-                                     @RequestParam(name = "encreptPassword") String encreptPassword
-                                 ) throws BusinessException ,NoSuchAlgorithmException, UnsupportedEncodingException {
+                                     @RequestParam(name = "password") String password
+    ) throws BusinessException, NoSuchAlgorithmException, UnsupportedEncodingException {
 
-         String localOtpCode =redisUtils.get(telphone).toString();
+        String localOtpCode = redisUtils.get(telphone).toString();
         //先验证码
-        if(!otpCode.equals(localOtpCode)){
-            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR,"短信验证不通过");
+        if (!otpCode.equals(localOtpCode)) {
+            throw new BusinessException(EmBussinessErr.PARAMETER_VALIDATION_ERROR, "短信验证不通过");
         }
         //用户的注册流程
         UserModel userModel = new UserModel();
@@ -98,32 +97,32 @@ public class UserController extends BaseController {
         userModel.setRegisterMode("byPhone");
         userModel.setAge(age);
         userModel.setGender(gender.byteValue());
-        userModel.setEncreptPassword(encodeByMd5(encreptPassword));
+        userModel.setEncreptPassword(encodeByMd5(password));
         userService.register(userModel);
 
-      return CommonReturnType.create(null) ;
+        return CommonReturnType.create(null);
     }
 
     //登入
-    @RequestMapping(value = "/login",method = {RequestMethod.POST},consumes = {CONTENTTYPE})
+    @RequestMapping(value = "/login", method = {RequestMethod.POST}, consumes = {CONTENT_TYPE_FORMED})
     @ResponseBody
-    public CommonReturnType login(@RequestParam(name = "telphone") String telphone,@RequestParam(name = "encreptPassword") String encreptPassword) throws BusinessException  ,NoSuchAlgorithmException, UnsupportedEncodingException{
-        if(StringUtils.isBlank(telphone) || StringUtils.isBlank(encreptPassword)){
-            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR);
+    public CommonReturnType login(@RequestParam(name = "telphone") String telphone, @RequestParam(name = "password") String password) throws BusinessException, NoSuchAlgorithmException, UnsupportedEncodingException {
+        if (StringUtils.isBlank(telphone) || StringUtils.isBlank(password)) {
+            throw new BusinessException(EmBussinessErr.PARAMETER_VALIDATION_ERROR);
         }
-        UserModel  userModel = userService.login(telphone ,encreptPassword);
-        if(!encreptPassword.equals(encodeByMd5(userModel.getEncreptPassword()))){
-            throw new BusinessException(EmBussinessError.USER_LOGIN_FAILED);
+        UserModel userModel = userService.login(telphone, password);
+        if (!encodeByMd5(password).equals(userModel.getEncreptPassword())) {
+            throw new BusinessException(EmBussinessErr.USER_LOOGIN_FAIL);
         }
-
         return CommonReturnType.create(null);
+
     }
 
 
     private String encodeByMd5(String encreptPassword) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         MessageDigest md5 = MessageDigest.getInstance("MD5");
         BASE64Encoder base64Encoder = new BASE64Encoder();
-        String  encodePassword = base64Encoder.encode(md5.digest(encreptPassword.getBytes("utf-8")));
+        String encodePassword = base64Encoder.encode(md5.digest(encreptPassword.getBytes("utf-8")));
         return encodePassword;
     }
 }

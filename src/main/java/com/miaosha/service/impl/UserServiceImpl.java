@@ -5,7 +5,7 @@ import com.miaosha.dao.UserPasswordDOMapper;
 import com.miaosha.dataobject.UserDO;
 import com.miaosha.dataobject.UserPasswordDO;
 import com.miaosha.erro.BusinessException;
-import com.miaosha.erro.EmBussinessError;
+import com.miaosha.erro.EmBussinessErr;
 import com.miaosha.service.UserService;
 import com.miaosha.service.model.UserModel;
 import org.apache.commons.lang3.StringUtils;
@@ -13,11 +13,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sun.misc.BASE64Encoder;
-
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -41,11 +36,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void register(UserModel userModel) throws BusinessException {
         if (userModel == null) {
-            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR);
+            throw new BusinessException(EmBussinessErr.PARAMETER_VALIDATION_ERROR);
         }
 
         if (StringUtils.isBlank(userModel.getName()) || userModel.getGender() == null || StringUtils.isBlank(userModel.getTelphone()) || userModel.getAge() == null) {
-            throw new BusinessException(EmBussinessError.PARAMETER_VALIDATION_ERROR);
+            throw new BusinessException(EmBussinessErr.PARAMETER_VALIDATION_ERROR);
         }
 //        usermodel -> dataObject
         UserDO userDO = convertFromModel(userModel);
@@ -62,7 +57,7 @@ public class UserServiceImpl implements UserService {
         UserDO userDO = userDOMapper.selectByTelphone(telphone);
         UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
         if(userDO == null || userPasswordDO ==null ){
-            throw  new BusinessException(EmBussinessError.USER_LOGIN_FAILED);
+            throw  new BusinessException(EmBussinessErr.USER_LOOGIN_FAIL);
         }
         return convertFromDataObject(userDO, userPasswordDO);
     }

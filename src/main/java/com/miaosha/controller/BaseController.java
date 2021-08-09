@@ -1,8 +1,8 @@
 package com.miaosha.controller;
 
-import com.miaosha.dataobject.response.CommonReturnType;
+import com.miaosha.response.CommonReturnType;
 import com.miaosha.erro.BusinessException;
-import com.miaosha.erro.EmBussinessError;
+import com.miaosha.erro.EmBussinessErr;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -15,7 +15,7 @@ import java.util.Map;
 public class BaseController {
 
 
-    static  final  String CONTENTTYPE = "application/x-www-form-urlencoded";
+    static  final  String CONTENT_TYPE_FORMED = "application/x-www-form-urlencoded";
 
     //定义ExceptionHandle 来解决controller的异常 因为controller是最后一层
     @ExceptionHandler(Exception.class)
@@ -29,8 +29,8 @@ public class BaseController {
             responseMap.put("errCode", businessException.getErrCode());
             responseMap.put("errMsg", businessException.getErrMsg());
         }else {
-            responseMap.put("errCode", EmBussinessError.UNKNOWN_ERROR.getErrCode());
-            responseMap.put("errMsg", EmBussinessError.UNKNOWN_ERROR.getErrMsg());
+            responseMap.put("errCode", EmBussinessErr.UNKNOWN_ERROR.getErrCode());
+            responseMap.put("errMsg", EmBussinessErr.UNKNOWN_ERROR.getErrMsg());
         }
 
         return CommonReturnType.create(responseMap,"fail");
